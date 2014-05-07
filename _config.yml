@@ -1,0 +1,11 @@
+# Site settings
+name: Me, Coding
+title: Me, coding
+email: azrosen92@gmail.com
+description: "This is where I will write about all the projects I will be working on."
+baseurl: ""
+url: "http://azrosen92.github.io"
+
+# Build settings
+markdown: kramdown
+permalinks: pretty
