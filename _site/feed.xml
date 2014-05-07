@@ -27,5 +27,98 @@ To add new posts, simply add a file in the &lt;code&gt;_posts&lt;/code&gt; direc
         <guid isPermaLink="true">/jekyll/update/2014/05/07/welcome-to-jekyll.html</guid>
       </item>
     
+      <item>
+        <title>Setting up a Spring projet with Java and Gradle</title>
+        <description>&lt;p&gt;I am starting work on a new project soon called NewsReel. My partner and I are trying to change the way people read and interact with the news, but I won’t go into too much detail about the project besides the technical stuff. We would like for this to be a mobile app, primarily, but as it will require some amount of computing power, I feel this will be best handled on a server. 
+For this back-end I have chosen a Java environment and Spring based application. I chose Java for the obvious reasons of it being fast, reliable, and portable. I chose Spring because I wanted to learn something new and, from what I have read it is easy to use and set up. To make the spring development a bit easier I am using Gradle, a versatile Java build tool. This blog post is going to be about how to build a working web application using Gradle and Spring. By the end of this post I will be serving up a single route to &lt;a href=&quot;http://localhost:8080/&quot;&gt;http://localhost:8080/&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;To start off we will make sure that we have everything installed. For now all we will need is Java and gradle. On my Linux machine running Ubuntu 13.04 it is as simple as running &lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;$ sudo add-apt-repository ppa:cwchien/gradle&lt;/code&gt;&lt;br /&gt;
+&lt;code&gt;$ sudo apt-get update&lt;/code&gt;&lt;br /&gt;
+&lt;code&gt;$ sudo apt-get install gradle&lt;/code&gt;  &lt;/p&gt;
+
+&lt;p&gt;to install the latest version of gradle, according to &lt;a href=&quot;http://askubuntu.com/a/328181/93075&quot;&gt;this thread on stack exchange&lt;/a&gt;. Java should already be installed. &lt;/p&gt;
+
+&lt;p&gt;Now we can get started creating the project. To do this we need to create the root directory of our project and then can run a simple gradle command&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;$ mkdir newsreel&lt;/code&gt;&lt;br /&gt;
+&lt;code&gt;$ cd newsreel&lt;/code&gt;&lt;br /&gt;
+&lt;code&gt;$ gradle init --type java-library&lt;/code&gt;  &lt;/p&gt;
+
+&lt;p&gt;This series of commands will generate a full file system for your java project, a build.gradle file, a gradlew bash script, which will allow you to easily run your application and a gradle directory for storing all of your gradle dependencies. Now we can check that everything is fine by running&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;$ gradle build&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://localhost:4000/assets/images/gradle_build.png&quot; alt=&quot;Gradle Build&quot; /&gt;  &lt;/p&gt;
+
+&lt;p&gt;and seeing that everything checks out. Now we are going to steal the &lt;code&gt;gradle.build&lt;/code&gt; file from Spring’s &lt;a href=&quot;https://spring.io/guides/gs/spring-boot/#scratch&quot;&gt;tutorial&lt;/a&gt; for setting up a web application. &lt;/p&gt;
+
+&lt;p&gt;Next we will create the java classes that will run our application. For now it will be two classes, a &lt;code&gt;src/main/java/newsreel/Application.java&lt;/code&gt; class that will run the entire application, and a &lt;code&gt;src/main/java/newsreel/NewsReelController.java&lt;/code&gt; class in which we will define our routes. &lt;/p&gt;
+
+&lt;p&gt;The Application class should look like this&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;&lt;span class=&quot;kn&quot;&gt;package&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;newsreel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;java.util.Arrays&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.boot.SpringApplication&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.boot.autoconfigure.EnableAutoConfiguration&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.context.ApplicationContext&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.context.annotation.ComponentScan&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.context.annotation.Configuration&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;nd&quot;&gt;@Configuration&lt;/span&gt;
+&lt;span class=&quot;nd&quot;&gt;@EnableAutoConfiguration&lt;/span&gt;
+&lt;span class=&quot;nd&quot;&gt;@ComponentScan&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Application&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;ApplicationContext&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ctx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SpringApplication&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Application&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+
+        &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;Let&amp;#39;s inspect the beans provided by Spring Boot:&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+
+        &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ctx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getBeanDefinitionNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;Arrays&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanName&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beanName&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;And the Controller should look like this&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;&lt;span class=&quot;kn&quot;&gt;package&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;newsreel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.web.bind.annotation.RestController&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.web.bind.annotation.RequestMapping&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;nd&quot;&gt;@RestController&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NewsReelController&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+
+    &lt;span class=&quot;nd&quot;&gt;@RequestMapping&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;/&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;Greetings from Spring Boot!&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Finally, we can build and run our application with the command&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;$ ./gradlew build &amp;amp;&amp;amp; java -jar build/libs/gs-spring-boot-0.1.0.jar&lt;/code&gt;  &lt;/p&gt;
+
+&lt;p&gt;And it should run without an error giving us the following output in the terminal&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;http://localhost:4000/assets/images/gradle_build_success.png&quot; alt=&quot;Build successful&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;And navigating to &lt;a href=&quot;http://localhost:8080/&quot;&gt;localhost:8080&lt;/a&gt; in the browser should show us the output of the “/” route “Greetings from Spring Boot!” in the browser. Now you have a running Spring application, created using Gradle.&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 07 May 2014 09:20:20 -0400</pubDate>
+        <link>/tutorial/java/spring/gradle/2014/05/07/java-spring-gradle.html</link>
+        <guid isPermaLink="true">/tutorial/java/spring/gradle/2014/05/07/java-spring-gradle.html</guid>
+      </item>
+    
   </channel>
 </rss>
