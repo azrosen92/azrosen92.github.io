@@ -1,8 +1,8 @@
 # Site settings
-name: Me, Coding
-title: Me, coding
+name: My Blog
+title: My Blog
 email: azrosen92@gmail.com
-description: "This is where I will write about all the projects I will be working on."
+description: "Random thoughts, tech or otherwise"
 baseurl: ""
 url: "http://azrosen92.github.io" #"http://localhost:4000"
 
