@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Setting up a Spring projet with Java and Gradle</title>
     <meta name="viewport" content="width=device-width">
-    <meta name="description" content="This is where I will write about all the projects I will be working on.">
+    <meta name="description" content="Random thoughts, tech or otherwise">
     <link rel="canonical" href="/tutorial/java/spring/gradle/2014/05/07/java-spring-gradle.html">
 
     <!-- Custom CSS -->
@@ -21,7 +21,7 @@
 
   <div class="wrap">
 
-    <a class="site-title" href="">Me, Coding</a>
+    <a class="site-title" href="">My Blog</a>
 
     <nav class="site-nav">
       <a href="#" class="menu-icon">
@@ -41,7 +41,7 @@
         
           <a class="page-link" href="/feed.xml"></a>
         
-          <a class="page-link" href="/index.html"></a>
+          <a class="page-link" href="/"></a>
         
       </div>
     </nav>
@@ -64,33 +64,33 @@
   <p>I am starting work on a new project soon called NewsReel. My partner and I are trying to change the way people read and interact with the news, but I won’t go into too much detail about the project besides the technical stuff. We would like for this to be a mobile app, primarily, but as it will require some amount of computing power, I feel this will be best handled on a server. 
 For this back-end I have chosen a Java environment and Spring based application. I chose Java for the obvious reasons of it being fast, reliable, and portable. I chose Spring because I wanted to learn something new and, from what I have read it is easy to use and set up. To make the spring development a bit easier I am using Gradle, a versatile Java build tool. This blog post is going to be about how to build a working web application using Gradle and Spring. By the end of this post I will be serving up a single route to <a href="http://localhost:8080/">http://localhost:8080/</a>.</p>
 
-<p>To start off we will make sure that we have everything installed. For now all we will need is Java and gradle. On my Linux machine running Ubuntu 13.04 it is as simple as running </p>
+<p>To start off we will make sure that we have everything installed. For now all we will need is Java and gradle. On my Linux machine running Ubuntu 13.04 it is as simple as running</p>
 
-<p><code>$ sudo add-apt-repository ppa:cwchien/gradle</code><br />
-<code>$ sudo apt-get update</code><br />
-<code>$ sudo apt-get install gradle</code>  </p>
+<p><code class="language-plaintext highlighter-rouge">$ sudo add-apt-repository ppa:cwchien/gradle</code><br />
+<code class="language-plaintext highlighter-rouge">$ sudo apt-get update</code><br />
+<code class="language-plaintext highlighter-rouge">$ sudo apt-get install gradle</code></p>
 
-<p>to install the latest version of gradle, according to <a href="http://askubuntu.com/a/328181/93075">this thread on stack exchange</a>. Java should already be installed. </p>
+<p>to install the latest version of gradle, according to <a href="http://askubuntu.com/a/328181/93075">this thread on stack exchange</a>. Java should already be installed.</p>
 
 <p>Now we can get started creating the project. To do this we need to create the root directory of our project and then can run a simple gradle command</p>
 
-<p><code>$ mkdir newsreel</code><br />
-<code>$ cd newsreel</code><br />
-<code>$ gradle init --type java-library</code>  </p>
+<p><code class="language-plaintext highlighter-rouge">$ mkdir newsreel</code><br />
+<code class="language-plaintext highlighter-rouge">$ cd newsreel</code><br />
+<code class="language-plaintext highlighter-rouge">$ gradle init --type java-library</code></p>
 
 <p>This series of commands will generate a full file system for your java project, a build.gradle file, a gradlew bash script, which will allow you to easily run your application and a gradle directory for storing all of your gradle dependencies. Now we can check that everything is fine by running</p>
 
-<p><code>$ gradle build</code></p>
+<p><code class="language-plaintext highlighter-rouge">$ gradle build</code></p>
 
-<p><img src="http://localhost:4000/assets/images/gradle_build.png" alt="Gradle Build" />  </p>
+<p><img src="http://azrosen92.github.io/assets/images/gradle_build.png" alt="Gradle Build" /></p>
 
-<p>and seeing that everything checks out. Now we are going to steal the <code>gradle.build</code> file from Spring’s <a href="https://spring.io/guides/gs/spring-boot/#scratch">tutorial</a> for setting up a web application. </p>
+<p>and seeing that everything checks out. Now we are going to steal the <code class="language-plaintext highlighter-rouge">gradle.build</code> file from Spring’s <a href="https://spring.io/guides/gs/spring-boot/#scratch">tutorial</a> for setting up a web application.</p>
 
-<p>Next we will create the java classes that will run our application. For now it will be two classes, a <code>src/main/java/newsreel/Application.java</code> class that will run the entire application, and a <code>src/main/java/newsreel/NewsReelController.java</code> class in which we will define our routes. </p>
+<p>Next we will create the java classes that will run our application. For now it will be two classes, a <code class="language-plaintext highlighter-rouge">src/main/java/newsreel/Application.java</code> class that will run the entire application, and a <code class="language-plaintext highlighter-rouge">src/main/java/newsreel/NewsReelController.java</code> class in which we will define our routes.</p>
 
 <p>The Application class should look like this</p>
 
-<div class="highlight"><pre><code class="java"><span class="kn">package</span> <span class="n">newsreel</span><span class="o">;</span>
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="nn">newsreel</span><span class="o">;</span>
 
 <span class="kn">import</span> <span class="nn">java.util.Arrays</span><span class="o">;</span>
 
@@ -105,23 +105,23 @@ For this back-end I have chosen a Java environment and Spring based application.
 <span class="nd">@ComponentScan</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Application</span> <span class="o">{</span>
 
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">ApplicationContext</span> <span class="n">ctx</span> <span class="o">=</span> <span class="n">SpringApplication</span><span class="o">.</span><span class="na">run</span><span class="o">(</span><span class="n">Application</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">args</span><span class="o">);</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">ApplicationContext</span> <span class="n">ctx</span> <span class="o">=</span> <span class="nc">SpringApplication</span><span class="o">.</span><span class="na">run</span><span class="o">(</span><span class="nc">Application</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">args</span><span class="o">);</span>
 
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Let&#39;s inspect the beans provided by Spring Boot:&quot;</span><span class="o">);</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Let's inspect the beans provided by Spring Boot:"</span><span class="o">);</span>
 
-        <span class="n">String</span><span class="o">[]</span> <span class="n">beanNames</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="na">getBeanDefinitionNames</span><span class="o">();</span>
-        <span class="n">Arrays</span><span class="o">.</span><span class="na">sort</span><span class="o">(</span><span class="n">beanNames</span><span class="o">);</span>
-        <span class="k">for</span> <span class="o">(</span><span class="n">String</span> <span class="n">beanName</span> <span class="o">:</span> <span class="n">beanNames</span><span class="o">)</span> <span class="o">{</span>
-            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">beanName</span><span class="o">);</span>
+        <span class="nc">String</span><span class="o">[]</span> <span class="n">beanNames</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="na">getBeanDefinitionNames</span><span class="o">();</span>
+        <span class="nc">Arrays</span><span class="o">.</span><span class="na">sort</span><span class="o">(</span><span class="n">beanNames</span><span class="o">);</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">beanName</span> <span class="o">:</span> <span class="n">beanNames</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">beanName</span><span class="o">);</span>
         <span class="o">}</span>
     <span class="o">}</span>
 
-<span class="o">}</span></code></pre></div>
+<span class="o">}</span></code></pre></figure>
 
 <p>And the Controller should look like this</p>
 
-<div class="highlight"><pre><code class="java"><span class="kn">package</span> <span class="n">newsreel</span><span class="o">;</span>
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="nn">newsreel</span><span class="o">;</span>
 
 <span class="kn">import</span> <span class="nn">org.springframework.web.bind.annotation.RestController</span><span class="o">;</span>
 <span class="kn">import</span> <span class="nn">org.springframework.web.bind.annotation.RequestMapping</span><span class="o">;</span>
@@ -129,20 +129,20 @@ For this back-end I have chosen a Java environment and Spring based application.
 <span class="nd">@RestController</span>
 <span class="kd">public</span> <span class="kd">class</span> <span class="nc">NewsReelController</span> <span class="o">{</span>
 
-    <span class="nd">@RequestMapping</span><span class="o">(</span><span class="s">&quot;/&quot;</span><span class="o">)</span>
-    <span class="kd">public</span> <span class="n">String</span> <span class="nf">index</span><span class="o">()</span> <span class="o">{</span>
-        <span class="k">return</span> <span class="s">&quot;Greetings from Spring Boot!&quot;</span><span class="o">;</span>
+    <span class="nd">@RequestMapping</span><span class="o">(</span><span class="s">"/"</span><span class="o">)</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">index</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="s">"Greetings from Spring Boot!"</span><span class="o">;</span>
     <span class="o">}</span>
 
-<span class="o">}</span></code></pre></div>
+<span class="o">}</span></code></pre></figure>
 
 <p>Finally, we can build and run our application with the command</p>
 
-<p><code>$ ./gradlew build &amp;&amp; java -jar build/libs/gs-spring-boot-0.1.0.jar</code>  </p>
+<p><code class="language-plaintext highlighter-rouge">$ ./gradlew build &amp;&amp; java -jar build/libs/gs-spring-boot-0.1.0.jar</code></p>
 
 <p>And it should run without an error giving us the following output in the terminal</p>
 
-<p><img src="http://localhost:4000/assets/images/gradle_build_success.png" alt="Build successful" /></p>
+<p><img src="http://azrosen92.github.io/assets/images/gradle_build_success.png" alt="Build successful" /></p>
 
 <p>And navigating to <a href="http://localhost:8080/">localhost:8080</a> in the browser should show us the output of the “/” route “Greetings from Spring Boot!” in the browser. Now you have a running Spring application, created using Gradle.</p>
 
@@ -157,11 +157,11 @@ For this back-end I have chosen a Java environment and Spring based application.
 
   <div class="wrap">
 
-    <h2 class="footer-heading">Me, Coding</h2>
+    <h2 class="footer-heading">My Blog</h2>
 
     <div class="footer-col-1 column">
       <ul>
-        <li>Me, coding</li>
+        <li>My Blog</li>
         <li><a href="mailto:azrosen92@gmail.com">azrosen92@gmail.com</a></li>
       </ul>
     </div>
@@ -208,7 +208,7 @@ For this back-end I have chosen a Java environment and Spring based application.
     </div>
 
     <div class="footer-col-3 column">
-      <p class="text">This is where I will write about all the projects I will be working on.</p>
+      <p class="text">Random thoughts, tech or otherwise</p>
     </div>
 
   </div>

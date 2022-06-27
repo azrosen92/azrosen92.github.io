@@ -1,28 +1,138 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Me, Coding</title>
-    <description>This is where I will write about all the projects I will be working on.</description>
+    <title>My Blog</title>
+    <description>Random thoughts, tech or otherwise</description>
     <link></link>
     <atom:link href="/feed.xml" rel="self" type="application/rss+xml" />
     
       <item>
+        <title>Navigating repos with different &quot;main&quot; branches</title>
+        <description>&lt;p&gt;There’s been a trend across the industry to start using a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;main&lt;/code&gt; branch instead of
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;master&lt;/code&gt;. There are a lot of reasons &lt;em&gt;to&lt;/em&gt; follow this trend having to do with inclusivity.
+I’m not going to go into those reasons in this post, I’m hoping that by reading this, I
+can assume you are aware of and generally in agreement with those reasons. What I’d like to
+talk about, is how I made this transition super easy for myself, given that I’m not always
+working in projects that use the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;main&lt;/code&gt; branch. For the immediate future, I expect to have
+to switch back and forth between projects that use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;master&lt;/code&gt; and those that use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;main&lt;/code&gt;. I
+recognize that a lot of organizations and open source projects are making a strong effort
+to make this transition, but as with anything in technology and engineering, it will take time.
+During this transition period how do I make it easy for myself to switch back and forth between
+projects using the two different “main” branch names.&lt;/p&gt;
+
+&lt;p&gt;For the past 4 years or so, I’ve maintained a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;config&lt;/code&gt; repo. This repo follows me around from job
+to job, laptop to laptop, and allows me to quickly set up a local dev environment in which I’m productive
+on most projects I work on. I have a number of git aliases, bash aliases, convenience scripts, and other
+configurations that I consider project-agnostic in this repo, and my goal is for everything to continue
+working as usual, regardless of the “main” branch being used in a project. I thought I’d leverage my &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;config&lt;/code&gt;
+repo to create some simple tooling which would allow me to easily switch back and forth between repos with a
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;main&lt;/code&gt; branch and those with a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;master&lt;/code&gt; branch.&lt;/p&gt;
+
+&lt;p&gt;The first thing I had to do was to make sure that my machine knows which branch a repo is using. After a
+bit or research, I settled on the following one-liner.&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;~$ git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I wanted this to run each time I &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;cd&lt;/code&gt; into a directory that contains a git repo, which was easily set up
+by overloading my machine’s &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;cd&lt;/code&gt; command as&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;set_main_branch() {
+  if [ -d .git ]; then
+    export GIT_MAIN=$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
+  fi
+}
+
+cd() {
+  builtin cd &quot;$@&quot;
+
+  set_main_branch
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;And then using &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$GIT_MAIN&lt;/code&gt; in place of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;master&lt;/code&gt; in all of my git alias’s.&lt;/p&gt;
+
+&lt;p&gt;For example&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[alias]
+  update = !&quot;git co $GIT_MAIN &amp;amp;&amp;amp; git pull &amp;amp;&amp;amp; git co - &amp;amp;&amp;amp; git rebase $GIT_MAIN&quot;
+  com = !&quot;git checkout $GIT_MAIN&quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;This may seem trivial, but it took a couple of iterations before I got to a solution that I was happy with.
+My first try at this, looked something like&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;~$ git remote show origin | grep &quot;HEAD branch&quot; | sed 's/.*: //'
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I immediately noticed a disruptive lag each time I switched directories, sometimes more than 1 second long.
+Without too much knowledge about what &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git remote show&lt;/code&gt; does, it’s obvious that there’s an http call happening
+in order to get the information I need. Some further digging into the docs, reveals that there’s an optional
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-n&lt;/code&gt; flag that can be used to fetch the remotes from cache. &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git symbolic-ref&lt;/code&gt;, on the other hand, uses the local
+file structure within the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.git/&lt;/code&gt; directory to print out the available local branches on the machine, saving the
+round trip http request. We pretty quickly get a result like this&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;~$ git symbolic-ref refs/remotes/origin/head
+refs/remotes/origin/main
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now comparing the two side by side, we can see more than 100x improvement in speed!&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;~$ time git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4
+master
+
+real	0m0.012s
+user	0m0.004s
+sys	0m0.008s
+
+~$ time git remote show origin | grep &quot;HEAD branch&quot; | sed 's/.*: //'
+master
+
+real	0m1.541s
+user	0m0.212s
+sys	0m0.131s
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;It’s worth noting that I could have also used &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git remote show&lt;/code&gt; with the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-n&lt;/code&gt; flag. But when timing this, it ended up being
+about 3 times slower than &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;git symbolic-ref&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;~$ git remote show origin -n | grep &quot;HEAD branch&quot; | sed 's/.*: //'
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;With this setup, I hardly notice when changing directories. My environment is automatically set up to work with
+whatever the maintainers of a git repo have chosen to use as their “main” branch. And all of my git aliases
+and workflows continue to work as they did before, without any distracting context changes.&lt;/p&gt;
+</description>
+        <pubDate>Mon, 27 Jun 2022 05:07:34 -0600</pubDate>
+        <link>/development/tools/git/2022/06/27/transition-to-new-default-git-branch.html</link>
+        <guid isPermaLink="true">/development/tools/git/2022/06/27/transition-to-new-default-git-branch.html</guid>
+      </item>
+    
+      <item>
+        <title>Hiking in Zion National Park</title>
+        <description>&lt;p&gt;For the long Fourth of July weekend I took a break from programming, and from Google to go to Zion National Park. I had never heard of the park before my roommate asked me if I wanted to go, but I’m always up for an adventure so I agreed. To get there we took a quick plane ride out of Stockton and into Vegas on our new favorite budget airline, Allegiance.&lt;/p&gt;
+</description>
+        <pubDate>Sun, 13 Jul 2014 12:22:34 -0600</pubDate>
+        <link>/travel/zion/california/summer/2014/07/13/zion-national-park.html</link>
+        <guid isPermaLink="true">/travel/zion/california/summer/2014/07/13/zion-national-park.html</guid>
+      </item>
+    
+      <item>
         <title>Welcome to Jekyll!</title>
-        <description>&lt;p&gt;You’ll find this post in your &lt;code&gt;_posts&lt;/code&gt; directory - edit this post and re-build (or run with the &lt;code&gt;-w&lt;/code&gt; switch) to see your changes!
-To add new posts, simply add a file in the &lt;code&gt;_posts&lt;/code&gt; directory that follows the convention: YYYY-MM-DD-name-of-post.ext.&lt;/p&gt;
+        <description>&lt;p&gt;You’ll find this post in your &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;_posts&lt;/code&gt; directory - edit this post and re-build (or run with the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-w&lt;/code&gt; switch) to see your changes!
+To add new posts, simply add a file in the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;_posts&lt;/code&gt; directory that follows the convention: YYYY-MM-DD-name-of-post.ext.&lt;/p&gt;
 
 &lt;p&gt;Jekyll also offers powerful support for code snippets:&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;ruby&quot;&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;print_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-  &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Hi, &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;print_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Hi, &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;
 &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;print_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;Tom&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;#=&amp;gt; prints &amp;#39;Hi, Tom&amp;#39; to STDOUT.&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;span class=&quot;n&quot;&gt;print_hi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'Tom'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#=&amp;gt; prints 'Hi, Tom' to STDOUT.&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;Check out the &lt;a href=&quot;http://jekyllrb.com&quot;&gt;Jekyll docs&lt;/a&gt; for more info on how to get the most out of Jekyll. File all bugs/feature requests at &lt;a href=&quot;https://github.com/jekyll/jekyll&quot;&gt;Jekyll’s GitHub repo&lt;/a&gt;.&lt;/p&gt;
 
 </description>
-        <pubDate>Wed, 07 May 2014 09:20:20 -0400</pubDate>
+        <pubDate>Wed, 07 May 2014 07:20:20 -0600</pubDate>
         <link>/jekyll/update/2014/05/07/welcome-to-jekyll.html</link>
         <guid isPermaLink="true">/jekyll/update/2014/05/07/welcome-to-jekyll.html</guid>
       </item>
@@ -32,33 +142,33 @@ To add new posts, simply add a file in the &lt;code&gt;_posts&lt;/code&gt; direc
         <description>&lt;p&gt;I am starting work on a new project soon called NewsReel. My partner and I are trying to change the way people read and interact with the news, but I won’t go into too much detail about the project besides the technical stuff. We would like for this to be a mobile app, primarily, but as it will require some amount of computing power, I feel this will be best handled on a server. 
 For this back-end I have chosen a Java environment and Spring based application. I chose Java for the obvious reasons of it being fast, reliable, and portable. I chose Spring because I wanted to learn something new and, from what I have read it is easy to use and set up. To make the spring development a bit easier I am using Gradle, a versatile Java build tool. This blog post is going to be about how to build a working web application using Gradle and Spring. By the end of this post I will be serving up a single route to &lt;a href=&quot;http://localhost:8080/&quot;&gt;http://localhost:8080/&lt;/a&gt;.&lt;/p&gt;
 
-&lt;p&gt;To start off we will make sure that we have everything installed. For now all we will need is Java and gradle. On my Linux machine running Ubuntu 13.04 it is as simple as running &lt;/p&gt;
+&lt;p&gt;To start off we will make sure that we have everything installed. For now all we will need is Java and gradle. On my Linux machine running Ubuntu 13.04 it is as simple as running&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;$ sudo add-apt-repository ppa:cwchien/gradle&lt;/code&gt;&lt;br /&gt;
-&lt;code&gt;$ sudo apt-get update&lt;/code&gt;&lt;br /&gt;
-&lt;code&gt;$ sudo apt-get install gradle&lt;/code&gt;  &lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ sudo add-apt-repository ppa:cwchien/gradle&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ sudo apt-get update&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ sudo apt-get install gradle&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;to install the latest version of gradle, according to &lt;a href=&quot;http://askubuntu.com/a/328181/93075&quot;&gt;this thread on stack exchange&lt;/a&gt;. Java should already be installed. &lt;/p&gt;
+&lt;p&gt;to install the latest version of gradle, according to &lt;a href=&quot;http://askubuntu.com/a/328181/93075&quot;&gt;this thread on stack exchange&lt;/a&gt;. Java should already be installed.&lt;/p&gt;
 
 &lt;p&gt;Now we can get started creating the project. To do this we need to create the root directory of our project and then can run a simple gradle command&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;$ mkdir newsreel&lt;/code&gt;&lt;br /&gt;
-&lt;code&gt;$ cd newsreel&lt;/code&gt;&lt;br /&gt;
-&lt;code&gt;$ gradle init --type java-library&lt;/code&gt;  &lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ mkdir newsreel&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ cd newsreel&lt;/code&gt;&lt;br /&gt;
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ gradle init --type java-library&lt;/code&gt;&lt;/p&gt;
 
 &lt;p&gt;This series of commands will generate a full file system for your java project, a build.gradle file, a gradlew bash script, which will allow you to easily run your application and a gradle directory for storing all of your gradle dependencies. Now we can check that everything is fine by running&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;$ gradle build&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ gradle build&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;http://localhost:4000/assets/images/gradle_build.png&quot; alt=&quot;Gradle Build&quot; /&gt;  &lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://azrosen92.github.io/assets/images/gradle_build.png&quot; alt=&quot;Gradle Build&quot; /&gt;&lt;/p&gt;
 
-&lt;p&gt;and seeing that everything checks out. Now we are going to steal the &lt;code&gt;gradle.build&lt;/code&gt; file from Spring’s &lt;a href=&quot;https://spring.io/guides/gs/spring-boot/#scratch&quot;&gt;tutorial&lt;/a&gt; for setting up a web application. &lt;/p&gt;
+&lt;p&gt;and seeing that everything checks out. Now we are going to steal the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;gradle.build&lt;/code&gt; file from Spring’s &lt;a href=&quot;https://spring.io/guides/gs/spring-boot/#scratch&quot;&gt;tutorial&lt;/a&gt; for setting up a web application.&lt;/p&gt;
 
-&lt;p&gt;Next we will create the java classes that will run our application. For now it will be two classes, a &lt;code&gt;src/main/java/newsreel/Application.java&lt;/code&gt; class that will run the entire application, and a &lt;code&gt;src/main/java/newsreel/NewsReelController.java&lt;/code&gt; class in which we will define our routes. &lt;/p&gt;
+&lt;p&gt;Next we will create the java classes that will run our application. For now it will be two classes, a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;src/main/java/newsreel/Application.java&lt;/code&gt; class that will run the entire application, and a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;src/main/java/newsreel/NewsReelController.java&lt;/code&gt; class in which we will define our routes.&lt;/p&gt;
 
 &lt;p&gt;The Application class should look like this&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;&lt;span class=&quot;kn&quot;&gt;package&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;newsreel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kn&quot;&gt;package&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;newsreel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
 
 &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;java.util.Arrays&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
 
@@ -73,23 +183,23 @@ For this back-end I have chosen a Java environment and Spring based application.
 &lt;span class=&quot;nd&quot;&gt;@ComponentScan&lt;/span&gt;
 &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Application&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
 
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;ApplicationContext&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ctx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;SpringApplication&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Application&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;ApplicationContext&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ctx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;SpringApplication&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Application&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
 
-        &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;Let&amp;#39;s inspect the beans provided by Spring Boot:&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Let's inspect the beans provided by Spring Boot:&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
 
-        &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ctx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getBeanDefinitionNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
-        &lt;span class=&quot;n&quot;&gt;Arrays&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
-        &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanName&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-            &lt;span class=&quot;n&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beanName&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ctx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;getBeanDefinitionNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;Arrays&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanName&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;beanNames&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+            &lt;span class=&quot;nc&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;beanName&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
         &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
     &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;And the Controller should look like this&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;java&quot;&gt;&lt;span class=&quot;kn&quot;&gt;package&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;newsreel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kn&quot;&gt;package&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;newsreel&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
 
 &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.web.bind.annotation.RestController&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
 &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;org.springframework.web.bind.annotation.RequestMapping&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
@@ -97,25 +207,25 @@ For this back-end I have chosen a Java environment and Spring based application.
 &lt;span class=&quot;nd&quot;&gt;@RestController&lt;/span&gt;
 &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NewsReelController&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
 
-    &lt;span class=&quot;nd&quot;&gt;@RequestMapping&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;/&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;Greetings from Spring Boot!&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nd&quot;&gt;@RequestMapping&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;/&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Greetings from Spring Boot!&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
     &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
 
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;Finally, we can build and run our application with the command&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;$ ./gradlew build &amp;amp;&amp;amp; java -jar build/libs/gs-spring-boot-0.1.0.jar&lt;/code&gt;  &lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$ ./gradlew build &amp;amp;&amp;amp; java -jar build/libs/gs-spring-boot-0.1.0.jar&lt;/code&gt;&lt;/p&gt;
 
 &lt;p&gt;And it should run without an error giving us the following output in the terminal&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;http://localhost:4000/assets/images/gradle_build_success.png&quot; alt=&quot;Build successful&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://azrosen92.github.io/assets/images/gradle_build_success.png&quot; alt=&quot;Build successful&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;And navigating to &lt;a href=&quot;http://localhost:8080/&quot;&gt;localhost:8080&lt;/a&gt; in the browser should show us the output of the “/” route “Greetings from Spring Boot!” in the browser. Now you have a running Spring application, created using Gradle.&lt;/p&gt;
 
 </description>
-        <pubDate>Wed, 07 May 2014 09:20:20 -0400</pubDate>
+        <pubDate>Wed, 07 May 2014 07:20:20 -0600</pubDate>
         <link>/tutorial/java/spring/gradle/2014/05/07/java-spring-gradle.html</link>
         <guid isPermaLink="true">/tutorial/java/spring/gradle/2014/05/07/java-spring-gradle.html</guid>
       </item>
